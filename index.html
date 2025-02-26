@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Task Manager</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f4f4f4;
+        }
+        .container {
+            max-width: 500px;
+            margin: auto;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+        input, button {
+            display: block;
+            width: 100%;
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 5px;
+            border: 1px solid #ccc;
+        }
+        button {
+            background: #28a745;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+        button:hover {
+            background: #218838;
+        }
+        ul {
+            list-style: none;
+            padding: 0;
+        }
+        li {
+            background: #fff;
+            padding: 10px;
+            margin: 5px 0;
+            display: flex;
+            justify-content: space-between;
+            border-radius: 5px;
+            border: 1px solid #ddd;
+        }
+        .task-actions button {
+            margin-left: 5px;
+            background: #007bff;
+        }
+        .task-actions button.delete {
+            background: #dc3545;
+        }
+    </style>
+    <script>
+        let token = '';
+        
+        function register() {
+            const username = document.getElementById("reg-username").value;
+            const password = document.getElementById("reg-password").value;
+            
+            fetch("http://127.0.0.1:5000/register", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ username, password })
+            }).then(response => response.json())
+              .then(data => alert(data.message));
+        }
+        
+        function login() {
+            const username = document.getElementById("login-username").value;
+            const password = document.getElementById("login-password").value;
+            
+            fetch("http://127.0.0.1:5000/login", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ username, password })
+            }).then(response => response.json())
+              .then(data => {
+                  if (data.access_token) {
+                      token = data.access_token;
+                      alert("Login successful");
+                      getTasks();
+                  } else {
+                      alert("Invalid credentials");
+                  }
+              });
+        }
+        
+        function getTasks() {
+            fetch("http://127.0.0.1:5000/tasks", {
+                method: "GET",
+                headers: { "Authorization": "Bearer " + token }
+            }).then(response => response.json())
+              .then(data => {
+                  const taskList = document.getElementById("tasks");
+                  taskList.innerHTML = "";
+                  data.forEach(task => {
+                      taskList.innerHTML += `<li>${task.title} - ${task.description} (${task.completed ? 'Completed' : 'Pending'}) 
+                      <div class='task-actions'>
+                        <button onclick="updateTask(${task.id})">Update</button>
+                        <button class='delete' onclick="deleteTask(${task.id})">Delete</button>
+                      </div>
+                      </li>`;
+                  });
+              });
+        }
+
+        function addTask() {
+            const title = document.getElementById("task-title").value;
+            const description = document.getElementById("task-desc").value;
+            
+            fetch("http://127.0.0.1:5000/tasks", {
+                method: "POST",
+                headers: { "Content-Type": "application/json", "Authorization": "Bearer " + token },
+                body: JSON.stringify({ title, description })
+            }).then(response => response.json())
+              .then(() => getTasks());
+        }
+
+        function updateTask(id) {
+            const newTitle = prompt("Enter new title:");
+            const newDescription = prompt("Enter new description:");
+            const completed = confirm("Mark as completed?");
+            
+            fetch(`http://127.0.0.1:5000/tasks/${id}`, {
+                method: "PUT",
+                headers: { "Content-Type": "application/json", "Authorization": "Bearer " + token },
+                body: JSON.stringify({ title: newTitle, description: newDescription, completed })
+            }).then(() => getTasks());
+        }
+
+        function deleteTask(id) {
+            fetch(`http://127.0.0.1:5000/tasks/${id}`, {
+                method: "DELETE",
+                headers: { "Authorization": "Bearer " + token }
+            }).then(() => getTasks());
+        }
+    </script>
+</head>
+<body>
+    <div class="container">
+        <h1>Task Manager</h1>
+        
+        <h2>Register</h2>
+        <input type="text" id="reg-username" placeholder="Username">
+        <input type="password" id="reg-password" placeholder="Password">
+        <button onclick="register()">Register</button>
+        
+        <h2>Login</h2>
+        <input type="text" id="login-username" placeholder="Username">
+        <input type="password" id="login-password" placeholder="Password">
+        <button onclick="login()">Login</button>
+        
+        <h2>Tasks</h2>
+        <input type="text" id="task-title" placeholder="Task Title">
+        <input type="text" id="task-desc" placeholder="Task Description">
+        <button onclick="addTask()">Add Task</button>
+        
+        <ul id="tasks"></ul>
+    </div>
+</body>
+</html>
